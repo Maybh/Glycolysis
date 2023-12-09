@@ -1,3 +1,8 @@
+name = "MetabolicPathway"
+uuid = "2d2252a8-8ee4-4dd7-960f-34f710aa39ba"
+authors = ["May Benhamo <may.benhamo@gmail.com>", "Denis-Titov <titov@berkeley.edu>", "and contributors"]
+version = "0.1.0"
+
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CMAEvolutionStrategy = "8d3b24bd-414e-49e0-94fb-163cc3a3e411"
