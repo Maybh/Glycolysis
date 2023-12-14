@@ -21,11 +21,8 @@ number_points_per_fig =
     combine(groupby(PKM2_data_for_fit, :dropped_fig), nrow => :number_datapoints_per_fig, renamecols = false)
 
 min_fig_loocv = combine(sdf -> sdf[argmin(sdf.train_fit), :], groupby(results_fig_loocv, :dropped_fig))
-min_fig_loocv = combine(
-    groupby(results_fig_loocv, :dropped_fig),
-    :test_fit => minimum => :test_loss_dropped_fig,
-    renamecols = false,
-)
+min_fig_loocv = rename(min_fig_loocv, :test_fit => :test_loss_dropped_fig)
+
 min_fig_loocv_train_all = combine(
     groupby(results_fig_loocv_train_all, :dropped_fig),
     :test_fit => minimum => :test_loss_all_figs,

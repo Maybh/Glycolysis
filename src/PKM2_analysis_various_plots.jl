@@ -18,10 +18,9 @@ bootstrap_data = CSV.read(
     DataFrame,
 )
 # Only include data with minimal fitness
-bootstrap_data = combine(
-    sdf -> filter(:fitness => ≈(minimum(sdf.fitness)), sdf),
-    groupby(bootstrap_data, :bootrap_fig_list),
-)
+bootstrap_data = combine(sdf -> sdf[argmin(sdf.fitness), :], groupby(bootstrap_data, :bootrap_fig_list))
+
+
 
 
 # Only include data that has at least one figure with [Pyruvate] != 0.0
