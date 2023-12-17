@@ -27,5 +27,6 @@ Manifest.toml
 *.ipynb
 *.zip
 *.xlsx
+.DS_Store
 
 Archived\ code/

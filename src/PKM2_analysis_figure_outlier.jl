@@ -23,11 +23,9 @@ number_points_per_fig =
 min_fig_loocv = combine(sdf -> sdf[argmin(sdf.train_fit), :], groupby(results_fig_loocv, :dropped_fig))
 min_fig_loocv = rename(min_fig_loocv, :test_fit => :test_loss_dropped_fig)
 
-min_fig_loocv_train_all = combine(
-    groupby(results_fig_loocv_train_all, :dropped_fig),
-    :test_fit => minimum => :test_loss_all_figs,
-    renamecols = false,
-)
+min_fig_loocv_train_all = combine(sdf -> sdf[argmin(sdf.train_fit), :], groupby(results_fig_loocv_train_all, :dropped_fig))
+min_fig_loocv_train_all = rename(min_fig_loocv_train_all, :test_fit => :test_loss_all_figs)
+
 
 
 analysis_df = select(innerjoin(number_points_per_fig, min_fig_loocv, min_fig_loocv_train_all; on=:dropped_fig),
