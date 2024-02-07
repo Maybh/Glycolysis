@@ -27,5 +27,6 @@ Manifest.toml
 *.zip
 *.xlsx
 .DS_Store
+.vscode
 
 Archived\ code/
