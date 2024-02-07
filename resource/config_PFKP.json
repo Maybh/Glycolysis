@@ -1,0 +1,139 @@
+{
+    "enzyme_name": "PFKP",
+    "constant_params":{
+        "Vmax_a": 1.0
+    },
+    "param_constraints":{
+        "L": {
+            "1": {"L": 0.0}
+        },
+        "Vmax":{
+            "1": {"Vmax_i": "Vmax_a"}
+        },
+        "K_F6P": {
+            "1": {"K_i_K_F6P": "K_a_K_F6P"},
+            "2": {"K_a_K_F6P": "Inf"}, 
+            "3": {"K_i_K_F6P": "Inf"}
+        },
+        "K_ATP":{
+            "1": {"K_i_ATP": "K_a_ATP"},
+            "2": {"K_a_ATP": "Inf"},
+            "3": {"K_i_ATP": "Inf"}
+        }, 
+        "K_F16BP":{
+            "1": {"K_i_F16BP": "K_a_F16BP"},
+            "2": {"K_a_F16BP": "Inf"},
+            "3": {"K_i_F16BP": "Inf"}
+        },
+        "K_ADP":{
+            "1": {"K_i_ADP": "K_a_ADP"},
+            "2": {"K_a_ADP": "Inf"},
+            "3": {"K_i_ADP": "Inf"}   
+        },
+        "K_ATPreg":{
+            "1": {"K_i_ATPreg": "K_a_ATPreg"},
+            "2": {"K_a_ATPreg": "Inf"},
+            "3": {"K_i_ATPreg": "Inf"}
+        },
+        "K_ADPreg":{
+            "1": {"K_i_ADPreg": "K_a_ADPreg"},
+            "2":{"K_a_ADPreg": "Inf"},
+            "3":{"K_i_ADPreg": "Inf"}
+        },
+        "K_Phosphate":{
+            "1": {"K_i_Phosphate": "K_a_Phosphate"},
+            "2":{"K_a_Phosphate": "Inf"},
+            "3":{"K_i_Phosphate": "Inf"}
+        },
+        "K_F26BP":{
+            "1": {"K_i_F26BP": "K_a_F26BP"},
+            "2":{"K_a_F26BP": "Inf"},
+            "3":{"K_i_F26BP": "Inf"}
+        },
+        "K_Citrate":{
+            "1": {"K_i_Citrate": "K_a_Citrate"},
+            "2":{"K_a_Citrate": "Inf"},
+            "3":{"K_i_Citrate": "Inf"}
+        },
+        "alpha_F6P_ATP":{
+            "0": {"alpha_F6P_ATP": 0.0},
+            "1":{"alpha_F6P_ATP": 1.0}
+        },
+        "alpha_F16BP_ADP":{
+            "0": {"alpha_F16BP_ADP": 0.0},
+            "1":{"alpha_F16BP_ADP": 1.0}
+        }
+    },
+    "rescaling":{
+        "L": "x -> 10^(-5) * 10^(10 * x / 10)",
+        "Vmax_a": "x -> 10^(-3) * 10^(3 * x / 10)",
+        "Vmax_i": "x -> 10^(-3) * 10^(3 * x / 10)",
+        "K_a_PEP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_ADP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_Pyruvate": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_ATP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_F16BP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_Phenylalanine": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_PEP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_ADP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_Pyruvate": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_ATP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_F16BP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_Phenylalanine": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "alpha_PEP_ATP": "x -> x >= 5.0 ? 1.0 :  0.0",
+        "alpha_Pyruvate_ADP": "x -> x >= 5.0 ? 1.0 : 0.0"
+    },
+    "param_names":[
+        "L",
+        "Vmax_a",
+        "Vmax_i",
+        "K_a_F6P",
+        "K_a_ATP",
+        "K_a_F16BP",
+        "K_a_ADP",
+        "K_a_ATPreg",
+        "K_a_ADPreg",
+        "K_a_Phosphate",
+        "K_a_F26BP",
+        "K_a_Citrate",
+        "K_i_F6P",
+        "K_i_ATP",
+        "K_i_F16BP",
+        "K_i_ADP",
+        "K_i_ATPreg",
+        "K_i_ADPreg",
+        "K_i_Phosphate",
+        "K_i_F26BP",
+        "K_i_Citrate",
+        "alpha_F6P_ADP",
+        "alpha_F16BP_ATP"
+    ],
+    "non_opt_params":[
+        "alpha_PEP_ATP",
+        "alpha_Pyruvate_ADP"
+    ],
+    "metab_names" : [
+        "F6P", 
+        "ATP", 
+        "F16BP", 
+        "ADP", 
+        "Phosphate",
+        "F26BP", 
+        "Citrate"
+    ],
+    "nt_param_choice_names" : [
+        "L",
+        "Vmax",
+        "K_F6P",
+        "K_ATP",
+        "K_F16BP",
+        "K_ADP",
+        "K_ATPreg",
+        "K_ADPreg",
+        "K_Phosphate",
+        "K_F26BP",
+        "K_Citrate",
+        "alpha_F6P_ATP",
+        "alpha_F16BP_ADP"
+    ]
+}
