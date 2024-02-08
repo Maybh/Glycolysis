@@ -3,7 +3,7 @@ using CMAEvolutionStrategy, JSON, Statistics, Distributions, LinearAlgebra, Mixe
 include("Utils.jl")
 include("Enzyme.jl")
 
-function loss_likelihood_2(
+function loss_likelihood(
     kinetic_params,
     rate_data,
     fig_point_indexes, 
