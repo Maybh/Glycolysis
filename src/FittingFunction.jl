@@ -1,11 +1,58 @@
-using CMAEvolutionStrategy, JSON, Statistics, Distributions, LinearAlgebra
+using CMAEvolutionStrategy, JSON, Statistics, Distributions, LinearAlgebra, MixedModels
 
 include("Utils.jl")
 include("Enzyme.jl")
 
+function loss_likelihood_2(
+    kinetic_params,
+    rate_data,
+    fig_point_indexes, 
+    config;
+    nt_param_choice = nothing,
+    optimization_param_names = nothing
+    )
+
+    nt_param_choice_names = config["nt_param_choice_names"]
+    if isnothing(nt_param_choice)
+        nt_param_choice = (; zip(nt_param_choice_names, zeros(Int64, length(nt_param_choice_names)))...)
+    end
+    
+    if isnothing(optimization_param_names)
+        kinetic_params = NamedTuple{Tuple(config["param_names"])}(kinetic_params)
+    # if optimization_param_names isn't nothing, it means we have partial list of the parameters 
+    else
+        kinetic_params = NamedTuple{Tuple(Symbol.(optimization_param_names))}(kinetic_params)
+    end 
+    
+    # rescaling and param_constraints
+    kinetic_params = param_rescaling_from_conf(kinetic_params, config["rescaling"])
+    kinetic_params = param_subset_select_from_conf(kinetic_params, nt_param_choice, 
+        config["param_constraints"], config["param_names"], config["constant_params"])
+    
+    log_actual_vs_pred = Vector{Float64}(undef, length(rate_data.Rate))
+    for i = 1:length(rate_data.Rate)
+        log_actual_vs_pred[i] = log(
+                rate_data.Rate[i] / rate_PKM2(
+                    rate_data.PEP[i],
+                    rate_data.ADP[i],
+                    rate_data.Pyruvate[i],
+                    rate_data.ATP[i],
+                    rate_data.F16BP[i],
+                    rate_data.Phenylalanine[i],
+                    kinetic_params,
+                ) ,
+        )
+    end
+    
+    df = DataFrame(figure=rate_data.fig_num, log_ratios=log_actual_vs_pred)
+    formula = @formula(log_ratios ~ (1|figure))
+    model = fit!(LinearMixedModel(formula, df))
+    
+    return -loglikelihood(model) # Negative log-likelihood for minimization
+end
 
 "Loss function used for fitting"
-function loss_likelihood(
+function loss_likelihood_old(
     kinetic_params,
     rate_data,
     fig_point_indexes, 
@@ -39,12 +86,12 @@ function loss_likelihood(
         
 
         # Construct the covariance matrix
-        Sigma_j = kinetic_params.sigma_alpha^2 * ones(n_j, n_j) + kinetic_params.sigma^2 * I(n_j)
+        Sigma_j = kinetic_params.sigma_alpha * ones(n_j, n_j) + kinetic_params.sigma * I(n_j)
        
         log_ratios = Vector{Float64}(undef, length(figure_data.Rate))
         for i = 1:n_j
             log_ratios[i] = log(
-                rate_PKM2(
+                figure_data.Rate[i] / rate_PKM2(
                     figure_data.PEP[i],
                     figure_data.ADP[i],
                     figure_data.Pyruvate[i],
@@ -52,7 +99,7 @@ function loss_likelihood(
                     figure_data.F16BP[i],
                     figure_data.Phenylalanine[i],
                     kinetic_params,
-                ) / figure_data.Rate[i],
+                ) ,
             )
         end
         
