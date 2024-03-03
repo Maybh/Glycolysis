@@ -3,23 +3,23 @@ include("Utils.jl")
 include("FittingFunction.jl")
 include("Enzyme.jl")
 
-function create_param_subsets(param_constraints, nt_param_choice_names)
-    # Make an array of all possible param combination
-    combination = Vector{Any}()
-    for name in nt_param_choice_names
-        name_str = string(name)
-        if haskey(param_constraints, name_str) 
-            constrains = param_constraints[name_str]
-            n_choices = haskey(constrains, "0") ? length(constrains) - 1 : length(constrains)
+# function create_param_subsets(param_constraints, nt_param_choice_names)
+#     # Make an array of all possible param combination
+#     combination = Vector{Any}()
+#     for name in nt_param_choice_names
+#         name_str = string(name)
+#         if haskey(param_constraints, name_str) 
+#             constrains = param_constraints[name_str]
+#             n_choices = haskey(constrains, "0") ? length(constrains) - 1 : length(constrains)
 
-            push!(combination, 0:n_choices)
-        else
-            push!(combination, 0)
-        end
-    end 
+#             push!(combination, 0:n_choices)
+#         else
+#             push!(combination, 0)
+#         end
+#     end 
 
-    return collect(Iterators.product(combination...))
-end
+#     return collect(Iterators.product(combination...))
+# end
 
 function find_best_models_per_fig_all_subsets(
     data,
@@ -101,7 +101,7 @@ function find_best_subsets_per_fig(dropped_fig, all_param_subsets,data, config;
     n_iter=20, n_non_params=2, maxiter = 50_000, print_prog = print_prog)
     
     param_names = config["param_names"]
-    metab_names = config["metab_names"]
+    metab_names =  collect(keys(config["metab_names"]))
     nt_param_choice_names = config["nt_param_choice_names"]
 
     if print_prog ==true
@@ -247,6 +247,232 @@ function find_best_subsets_per_fig(dropped_fig, all_param_subsets,data, config;
 
 
     return df_results_all
+end
+
+function find_best_subset_denis(
+    data,
+    param_subsets_per_n_params,
+    config,
+    dir_path;
+    n_iter = 20,
+    max_iter = 50_000,
+    pct_bound = 0, 
+    save_results = false,
+ )
+
+
+    param_names = config["param_names"]
+    metab_names = collect(keys(config["metab_names"]))
+    nt_param_choice_names = config["nt_param_choice_names"]
+
+    # convert DF to NamedTuple for better type stability / speed
+    rate_data = Tables.columntable(data[.!isnan.(data.Rate), [:Rate, metab_names..., :fig_num]],)
+
+    # make a vector containing indexes of points corresponding to each figure
+    fig_point_indexes = [findall(data.fig_num .== i) for i in unique(data.fig_num)]
+
+    df_results_all = DataFrame(
+        n_removed_params = Int[], 
+        error_counter = Int[],
+        param_subset = String[], 
+        # dropped_fig = String[], 
+        train_loss = Float64[], 
+        params = Vector{Float64}(undef,0),
+        param_ntuple_after_rescaling =  Vector{Any}()
+    )
+
+    starting_param_subsets = param_subsets_per_n_params[0]
+    # Initialize array to save the best models from each round
+    best_param_subsets = NamedTuple[]
+
+    for n_removed_params = 0:7
+        starting_param_subset_masks = unique([
+            (
+                mask = [(starting_param_subset[1:end-n_non_params] .== 0)..., zeros(Int64, n_non_params)...],
+                non_zero_params = starting_param_subset .* (starting_param_subset .!= 0),
+            ) for starting_param_subset in starting_param_subsets
+        ])
+        
+        subset_of_all_param_subsets_w_n_removed_params = param_subsets_per_n_params[n_removed_params]
+
+        
+        # actually choose param_subsets with n_removed_params number of parameters removed that also contain non-zero elements from starting_param_subsets
+        param_subsets = []
+        for starting_param_subset_mask in starting_param_subset_masks
+            push!(
+                param_subsets,
+                unique([
+                    subset_w_n_removed_params .* starting_param_subset_mask.mask .+
+                    starting_param_subset_mask.non_zero_params for
+                    subset_w_n_removed_params in subset_of_all_param_subsets_w_n_removed_params if sum(
+                        (
+                            subset_w_n_removed_params .* starting_param_subset_mask.mask .+
+                            starting_param_subset_mask.non_zero_params
+                        )[1:end-n_non_params] .> 0,
+                    ) == n_removed_params
+                ])...,
+            )
+        end
+        
+
+        param_subsets = [
+            NamedTuple{Tuple(nt_param_choice_names)}(x) for
+            x in unique(param_subsets) if sum(values(x[1:end-n_non_params]) .> 0) == n_removed_params
+        ]
+
+                
+        # Filter out parameter subsets that produce NaN loss values (e.g., when all substrate K = Inf)
+        param_subsets = [
+            param_subset for param_subset in unique(param_subsets) if !isnan(
+                loss(
+                    ones(length(param_names)),
+                    rate_data,
+                    fig_point_indexes, 
+                    config;
+                    nt_param_choice = param_subset,
+                ),
+            )
+        ]
+        @info "n_removed params: $n_removed_params, n param_subsets: $(length(param_subsets))"
+        
+        results_array = pmap(
+            param_subset -> train(data, config; n_iter = n_iter,maxiter = maxiter, nt_param_choice = param_subset),
+            param_subsets,
+        )
+
+        
+        @info "finished fig_loocv, $dropped_fig"        
+        results_df = DataFrame(
+            n_removed_params = Int[], 
+            error_counter = Int[],
+            param_subset = String[], 
+            train_loss = Float64[], 
+            params = Vector{Float64}(undef,0), 
+            param_ntuple_after_rescaling =  Vector{Any}()
+        )
+
+
+
+
+        for i in eachindex(results_array)
+            
+            train_params = results_array[i][2]
+            train_param_names = results_array[i][4]
+            ntuple_train_params = NamedTuple{Tuple(train_param_names)}(train_params)
+            ntuple_train_params = param_rescaling_from_conf(
+                ntuple_train_params, config["rescaling"])
+            ntuple_train_params = param_subset_select_from_conf(
+                ntuple_train_params, 
+                nt_param_choice,
+                 config["param_names"], 
+                 config["constant_params"]
+                 )
+
+            row_dict =  Dict("n_removed_params" => n_removed_params,
+                "error_counter" => results_array[i][3],
+                "param_subset" => string(param_subsets[i]),
+                "train_loss" => results_array[i][1],
+                "params" => train_params,
+                "param_ntuple_after_rescaling" => ntuple_train_params
+            )
+            push!(results_df, row_dict, promote=true)  
+        end
+    
+        df_results = results_df
+
+    #     max_length = maximum(length.(results_df.params))
+    #     results_params_df = DataFrame([getindex.(results_df.params, i) for i in 1:max_length], :auto)
+    #     rename!(results_params_df, param_names)
+
+    #     df_results = hcat(select(results_df, Not(:params)), results_params_df)    
+
+        # Filter subsets with NaN train or test loss values
+        filter!(row -> !isnan(row.train_loss), df_results)
+    
+        # Filter DataFrame df_result to only include rows that have train_loss lower than 1.1*minimum(train_loss)
+        filter!(row -> row.train_loss < 1.1 * minimum(df_results.train_loss), df_results)
+
+        # Sort DataFrame df_result by train_loss from low to high
+        sort!(df_results, :train_loss)
+
+        # Take the n_best_models param_subsets for this n_removed_params
+        best_param_subsets_for_this_n_removed_params = eval.(Meta.parse.(df_results.param_subset))
+
+        # # Add the best param_subset for this n_removed_params to the list of best_param_subsets for later test loss calculation
+        push!(best_param_subsets, best_param_subsets_for_this_n_removed_params...)
+
+        # add the best params row for later use:     
+        # df_results_min = DataFrame(df_results[argmin(df_results.train_loss),:]) 
+        # df_results_all = vcat(df_results_all, df_results_min)
+        
+        # Update starting_param_subsets to be the best param_subsets for this n_removed_params
+        global starting_param_subsets = values.(best_param_subsets_for_this_n_removed_params)
+
+    end
+
+    # max_length = maximum(length.(df_results_all.params))
+    # results_params_df = DataFrame([getindex.(df_results_all.params, i) for i in 1:max_length], :auto)
+    # rename!(results_params_df, param_names)
+
+    # df_results_all = hcat(select(df_results_all, Not(:params)), results_params_df)   
+
+    df_results_all = DataFrame(
+        n_removed_params = Int[], 
+        error_counter = Int[],
+        param_subset = String[], 
+        dropped_fig = String[], 
+        train_loss = Float64[], 
+        test_loss = Float64[], 
+        params = Vector{Float64}(undef,0),
+        ntuple_params =  Vector{Any}()
+    )
+
+    # return df_results_all
+
+    n_repeats = 1
+    figs = unique(PKM2_data_for_fit.source)
+    list_figs = repeat(vcat([fill(fig, length(best_param_subsets)) for fig in figs]...), n_repeats)
+    list_param_subsets = repeat(vcat([best_param_subsets for fig in figs]...), n_repeats)
+    @assert length(list_figs) == length(list_param_subsets)
+
+    # Fit to training data missing one figure to rank subsets based on their training loss value
+    results_array = pmap(
+        (fig, param_subset) ->
+            fig_loocv(fig, data, config; n_iter =n_iter, maxiter = maxiter, nt_param_choice = param_subset),
+        list_figs,
+        list_param_subsets,
+    )
+
+    for i in eachindex(results_array)
+ 
+        train_params = results_array[i][4]
+        ntuple_params = NamedTuple{Tuple(param_names)}(train_params)
+        row_dict =  Dict("n_removed_params" => n_removed_params,
+            "error_counter" => results_array[i][5],
+            "param_subset" => string(list_param_subsets[i]),
+            "dropped_fig" => results_array[i][1],
+            "train_loss" => results_array[i][2],
+            "params" => train_params,
+            "ntuple_params" => ntuple_train_params
+        )
+        push!(df_results_all, row_dict, promote=true)  
+    end
+
+    if save_results==true
+        enzyme_name = config["enzyme_name"]
+        save_csv_with_subdir(df_results_all,
+            joinpath(dir_path, "Cluster_results/$date_time"),    
+            "denis_loocv_best_models_$enzyme_name.csv"
+        )
+    end
+
+    best_param_subset = DataFrame(df_results_all[argmin(results_df.test_loss),:])
+    println("Best subset: $(best_param_subset.param_subset)")
+    println(best_param_subset)
+
+    # TODO: find the best subsets estimates that already trained in the first stage and save them
+    # TODO: make sure metab names is working properly in the new version (extract a list rather than a dict)
+
 end
 
 
@@ -419,13 +645,14 @@ function variable_selection(config, data, dir_path)
      figs = unique(data.source) 
  
      # param subsets
-     vals_all_param_subsets = create_param_subsets(config["param_constraints"], config["nt_param_choice_names"])
+    #  vals_all_param_subsets = create_param_subsets(config["param_constraints"], config["nt_param_choice_names"])
+    vals_all_param_subsets = collect(Iterators.product(config["combination"]...))
      # (0, 1, 2, 1, 1, 0, 0, 0, 0, 0) => (0, 0, 1, 1, 0)
      # number of terms at end of vals_all_param_subsets that are a3 where non-negative value != removing parameter
      n_non_params = length(config["non_opt_params"])
  
      # keep for each n removed params: all the subsets with this n:
-     param_subsets_tuple = [(sum(values(param_subset)[1:end-n_non_params] .> 0), values(param_subset)) 
+     param_subsets_tuple = [(sum(values(param_subset)[1:config["first_index_alpha"]-1] .> 0), values(param_subset)) 
          for param_subset in vals_all_param_subsets]
  
      param_subsets_per_n_params = Dict{Int, Vector}()
