@@ -1,3 +1,142 @@
+include("Utils.jl")
+
+function find_all_regulator_binding_sites(
+    all_regulators,
+    binding_sites # list of all bindinf sites of len > 1 
+)
+    regulators_not_in_sites = setdiff(all_regulators, vcat(binding_sites...))
+    
+    all_binding_sites = [site for site in binding_sites]
+    for reg in regulators_not_in_sites
+    push!(all_binding_sites, [reg])
+    end
+    
+    return all_binding_sites
+end
+
+function calculate_Z_reg(
+    all_reg_binding_sites,
+    kinetic_params,
+    rate_data_i,
+    state # active/inactive
+)
+
+    # Calculate Z^reg
+    Z_reg = 1.0  # Start with 1.0 since we're multiplying
+    for site in all_reg_binding_sites
+        sum_term = 1.0  # The inner sum starts at 1 because of the "+1" in the formula
+        for reg in site
+            reg_rate = getproperty(rate_data_i, Symbol(reg)) # Get the rate data for the regulator
+            K_reg = getproperty(params, Symbol("K_", state, "_", reg, "_r"))  # Get the dissociation constant
+            sum_term += reg_rate / K_reg  # Add the (regulator rate / K_regulator)
+        end
+        Z_reg *= sum_term  # Multiply the result by the accumulating product
+    end
+
+    return Z_reg
+
+end
+
+function calculate_Z_cat(S1,S2,P1, P2, K_S1,K_S2, K_P1, K_P2,
+    alpha_S1_P1, 
+    alpha_S1_P2, 
+    alpha_S2_P1, 
+    alpha_S2_P2
+)
+    res = (
+        1 +
+        (S1/K_S1) + (S2/K_S2 )+ (P1/K_P1) + (P2/K_P2)+
+        ((S1*S2)/(K_S1*K_S2)) +
+        ((P1*P2)/(K_P1*K_P2)) +
+        (alpha_S1_P1 * (S1*P1)/(K_S1*K_P1)) +
+        (alpha_S1_P2 * (S1*P2)/(K_S1*K_P2)) +
+        (alpha_S2_P1 * (S2*P1)/(K_S2*K_P1)) +
+        (alpha_S2_P2 * (S2*P2)/(K_S2*K_P2))
+    )
+    return res
+end
+
+
+function rate_function(
+    rate_data_i,
+    sub_lst,
+    prod_lst,
+    reg_lst,
+    reg_binding_sites, 
+    n, 
+    kinetic_params
+)
+
+    # constant value:
+    Keq = 20_000
+
+    L = getproperty(kinetic_params, Symbol("L"))
+    Vmax_a = getproperty(kinetic_params, Symbol("Vmax_a"))
+    Vmax_i = getproperty(kinetic_params, Symbol("Vmax_i"))
+
+    # regulator terms
+    reg_binding_sites = find_all_regulator_binding_sites(reg_lst, reg_binding_sites)
+    Z_a_reg = calculate_Z_reg(reg_binding_sites,kinetic_params,rate_data_i,"a")
+    Z_i_reg = calculate_Z_reg(reg_binding_sites,kinetic_params,rate_data_i,"i")
+
+    # assuming there can be only S1,S2, P1,P2
+    S1 = getproperty(rate_data_i, Symbol(sub_lst[1]))
+    S2 = getproperty(rate_data_i, Symbol(sub_lst[2]))
+    P1 = getproperty(rate_data_i, Symbol(prod_lst[1]))
+    P2 = getproperty(rate_data_i, Symbol(prod_lst[2]))
+
+    K_a_S1 = getproperty(kinetic_params, Symbol("K_", "a", "_", sub_lst[1], "_s"))
+    K_i_S1 = getproperty(kinetic_params, Symbol("K_", "i", "_", sub_lst[1], "_s"))
+    K_a_S2 = getproperty(kinetic_params, Symbol("K_", "a", "_", sub_lst[2], "_s"))
+    K_i_S2 = getproperty(kinetic_params, Symbol("K_", "i", "_", sub_lst[2], "_s"))
+
+    K_a_P1 = getproperty(kinetic_params, Symbol("K_", "a", "_", prod_lst[1], "_p"))
+    K_i_P1 = getproperty(kinetic_params, Symbol("K_", "i", "_", prod_lst[1], "_p"))
+    K_a_P2 = getproperty(kinetic_params, Symbol("K_", "a", "_", prod_lst[2], "_p"))
+    K_i_P2 = getproperty(kinetic_params, Symbol("K_", "i", "_", prod_lst[2], "_p"))
+
+    alpha_S1_P1 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[1], "_", prod_lst[1]))
+    alpha_S1_P2 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[1], "_", prod_lst[2]))
+    alpha_S2_P1 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[2], "_", prod_lst[1]))
+    alpha_S2_P2 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[2], "_", prod_lst[2]))
+
+    # Calculating Z_cat terms:
+    Z_a_cat = calculate_Z_cat(S1,S2,P1,P2,
+        K_a_S1,K_a_S2,K_a_P1,K_a_P2,
+        alpha_S1_P1, alpha_S1_P2, alpha_S2_P1, alpha_S2_P2)
+    Z_i_cat = calculate_Z_cat(S1,S2,P1,P2,
+        K_i_S1,K_i_S2,K_i_P1,K_i_P2,
+        alpha_S1_P1, alpha_S1_P2, alpha_S2_P1, alpha_S2_P2)
+
+    # Calculating V
+    Vmax_a_rev =
+        (K_a_P1 != Inf && K_a_P2 != Inf) ?
+        Vmax_a * K_a_P1 * K_a_P2 / (Keq * K_a_S1 * K_a_S2) : 0.0
+    Vmax_i_rev =
+        (K_i_P1 != Inf && K_i_P2 != Inf) ?
+        Vmax_i * K_i_P1 * K_i_P2 / (Keq * K_i_S1 * K_i_S2) : 0.0
+
+    Rate = 
+        (
+            (
+                Vmax_a * (S1 / K_a_S1) * (S2 / K_a_S2) -
+                Vmax_a_rev * (P1 / K_a_P1) * (P2 / K_a_P2)
+            ) *
+            (Z_a_cat^(n-1)) *
+            (Z_a_reg^n) +
+            L *
+            (
+                Vmax_i * (S1 / K_i_S1) * (S2 / K_i_S2) -
+                Vmax_i_rev * (P1 / K_i_P1) * (P2 / K_i_P2)
+            ) *
+            (Z_i_cat^(n-1)) *
+            (Z_i_reg^n)
+        ) / ((Z_a_cat^n) * (Z_a_reg^n) + L * (Z_i_cat^n) * (Z_i_reg^n))
+
+    return Rate
+end
+
+
 
 "function to calculate rate of PKM2"
 function rate_PKM2(PEP, ADP, Pyruvate, ATP, F16BP, Phenylalanine, p)
