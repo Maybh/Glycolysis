@@ -1,0 +1,86 @@
+{
+    "enzyme_name": "PKM2",
+    "mode": "cluster",
+    "loss_choice": "sse",
+    "fitting_params": {
+        "n_iter": 20,
+        "maxiter": 50000
+    },
+    "n": 4,
+    "constant_params": {
+        "Vmax_a": 1.0
+    },
+    "param_constraints":{
+        "Vmax":{
+            "1": {"Vmax_i": "Vmax_a"}
+        },
+        "K_PEP_s": {
+            "1": {"K_i_PEP_s": "K_a_PEP_s"},
+            "2": {"K_a_PEP_s": "Inf"}, 
+            "3": {"K_i_PEP_s": "Inf"}
+        },
+        "K_ADP_s":{
+            "1": {"K_i_ADP_s": "K_a_ADP_s"},
+            "2": {"K_a_ADP_s": "Inf"},
+            "3": {"K_i_ADP_s": "Inf"}
+        }, 
+        "K_Pyruvate_p":{
+            "1": {"K_i_Pyruvate_p": "K_a_Pyruvate_p"},
+            "2": {"K_a_Pyruvate_p": "Inf"},
+            "3": {"K_i_Pyruvate_p": "Inf"}
+        },
+        "K_ATP_p":{
+            "1": {"K_i_ATP_p": "K_a_ATP_p"},
+            "2": {"K_a_ATP_p": "Inf"},
+            "3": {"K_i_ATP_p": "Inf"}
+            
+        },
+        "K_F16BP_r":{
+            "1": {"K_i_F16BP_r": "K_a_F16BP_r"},
+            "2": {"K_a_F16BP_r": "Inf"},
+            "3": {"K_i_F16BP_r": "Inf"}
+        },
+        "K_Phenylalanine_r":{
+            "1": {"K_i_Phenylalanine_r": "K_a_Phenylalanine_r"},
+            "2":{"K_a_Phenylalanine_r": "Inf"},
+            "3":{"K_i_Phenylalanine_r": "Inf"}
+        },
+        "alpha_PEP_ATP":{
+            "0": {"alpha_PEP_ATP": 0.0},
+            "1":{"alpha_PEP_ATP": 1.0}
+        },
+        "alpha_ADP_Pyruvate":{
+            "0": {"alpha_ADP_Pyruvate": 0.0},
+            "1":{"alpha_ADP_Pyruvate": 1.0}
+        }
+    },
+    "rescaling":{
+        "L": "x -> 10^(-5) * 10^(10 * x / 10)",
+        "Vmax_a": "x -> 10^(-3) * 10^(3 * x / 10)",
+        "Vmax_i": "x -> 10^(-3) * 10^(3 * x / 10)",
+        "K_a_PEP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_ADP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_Pyruvate": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_ATP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_F16BP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_a_Phenylalanine": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_PEP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_ADP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_Pyruvate": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_ATP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_F16BP": "x -> 10^(-10) * 10^(13 * x / 10)",
+        "K_i_Phenylalanine": "x -> 10^(-10) * 10^(13 * x / 10)"
+    },
+    "substrate_product_no_binding_pairs":[
+        ["PEP", "ATP"],
+        ["ADP", "Pyruvate"] 
+    ],
+    "metab_names" : {
+        "PEP": "substrate", 
+        "ADP": "substrate", 
+        "Pyruvate":"product", 
+        "ATP": "product", 
+        "F16BP": "regulator", 
+        "Phenylalanine": "regulator"
+    }
+}
