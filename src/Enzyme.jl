@@ -27,7 +27,7 @@ function calculate_Z_reg(
         sum_term = 1.0  # The inner sum starts at 1 because of the "+1" in the formula
         for reg in site
             reg_rate = getproperty(rate_data_i, Symbol(reg)) # Get the rate data for the regulator
-            K_reg = getproperty(params, Symbol("K_", state, "_", reg, "_r"))  # Get the dissociation constant
+            K_reg = getproperty(kinetic_params, Symbol("K_", state, "_", reg, "_r"))  # Get the dissociation constant
             sum_term += reg_rate / K_reg  # Add the (regulator rate / K_regulator)
         end
         Z_reg *= sum_term  # Multiply the result by the accumulating product
@@ -78,7 +78,7 @@ function rate_function(
     reg_binding_sites = find_all_regulator_binding_sites(reg_lst, reg_binding_sites)
     Z_a_reg = calculate_Z_reg(reg_binding_sites,kinetic_params,rate_data_i,"a")
     Z_i_reg = calculate_Z_reg(reg_binding_sites,kinetic_params,rate_data_i,"i")
-
+ 
     # assuming there can be only S1,S2, P1,P2
     S1 = getproperty(rate_data_i, Symbol(sub_lst[1]))
     S2 = getproperty(rate_data_i, Symbol(sub_lst[2]))
@@ -89,7 +89,7 @@ function rate_function(
     K_i_S1 = getproperty(kinetic_params, Symbol("K_", "i", "_", sub_lst[1], "_s"))
     K_a_S2 = getproperty(kinetic_params, Symbol("K_", "a", "_", sub_lst[2], "_s"))
     K_i_S2 = getproperty(kinetic_params, Symbol("K_", "i", "_", sub_lst[2], "_s"))
-
+ 
     K_a_P1 = getproperty(kinetic_params, Symbol("K_", "a", "_", prod_lst[1], "_p"))
     K_i_P1 = getproperty(kinetic_params, Symbol("K_", "i", "_", prod_lst[1], "_p"))
     K_a_P2 = getproperty(kinetic_params, Symbol("K_", "a", "_", prod_lst[2], "_p"))
@@ -99,7 +99,7 @@ function rate_function(
     alpha_S1_P2 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[1], "_", prod_lst[2]))
     alpha_S2_P1 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[2], "_", prod_lst[1]))
     alpha_S2_P2 = getproperty(kinetic_params, Symbol("alpha_", sub_lst[2], "_", prod_lst[2]))
-
+  
     # Calculating Z_cat terms:
     Z_a_cat = calculate_Z_cat(S1,S2,P1,P2,
         K_a_S1,K_a_S2,K_a_P1,K_a_P2,
