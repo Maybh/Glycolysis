@@ -340,9 +340,7 @@ function find_best_subset_denis(
             param_subset -> train(data, config; n_iter = n_iter,maxiter = maxiter, nt_param_choice = param_subset),
             param_subsets,
         )
-
-        
-        @info "finished fig_loocv, $dropped_fig"        
+     
         results_df = DataFrame(
             n_removed_params = Int[], 
             error_counter = Int[],
@@ -352,11 +350,7 @@ function find_best_subset_denis(
             param_ntuple_after_rescaling =  Vector{Any}()
         )
 
-
-
-
         for i in eachindex(results_array)
-            
             train_params = results_array[i][2]
             train_param_names = results_array[i][4]
             ntuple_train_params = NamedTuple{Tuple(train_param_names)}(train_params)
