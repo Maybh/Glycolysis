@@ -1,10 +1,10 @@
-cd(@__DIR__)
+# cd(@__DIR__)
 using Pkg
-# cd("Glycolysis")
-Pkg.activate(".")
 # Pkg.activate("/global/home/users/maybenhamo/.julia/environments/v1.9")
-dir_path = "/global/home/users/maybenhamo/Glycolysis"
-
+# dir_path = "/global/home/users/maybenhamo/Glycolysis"
+dir_path = "/home/ec2-user/code/Glycolysis.jl"
+cd(dir_path)
+Pkg.activate(".")
 
 @info "starting"
 
@@ -25,7 +25,7 @@ using Distributed, ClusterManagers, Dates
 
 include("Utils.jl")
 
-config_path = joinpath(dir_path, "resource/config.json")
+config_path = joinpath(dir_path, "resource/config_new.json")
 config = read_config(config_path)
 
 @info "config: $config"
@@ -33,7 +33,7 @@ config = read_config(config_path)
 if lowercase(config["mode"]) == "cluster"
     initial_cluster()
 elseif lowercase(config["mode"]) == "local"
-    initial_local_distribution(n_process=16)
+    initial_local_distribution(n_process=3)
 else
     throw(ArgumentError("mode is missing in configuration or invalid, it should be cluster or local]"))
 end
@@ -46,6 +46,7 @@ global date_time = Dates.format(now(), "mmddyy HH:MM:SS")
 
 
 function Run(config, data_path, dir_path)
+    # TODO: fix the code to define rate_data only once!! 
     starting_time = now()
     formatted_time = Dates.format(starting_time, "HH:MM:SS")
     prefix = joinpath(dir_path, "logs/julia-$formatted_time")

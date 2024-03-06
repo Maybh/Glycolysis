@@ -112,6 +112,9 @@ function read_config(path)
     first_index_alpha = findfirst(s -> startswith(String(s), "alpha"), configParams.nt_param_choice_names)
     config["first_index_alpha"] = first_index_alpha
     config["non_opt_params"] = [non_opt for non_opt in configParams.nt_param_choice_names[first_index_alpha:end]]
+    config["substrates"] = configParams.substrates
+    config["products"] = configParams.products
+    config["regulators"] = configParams.regulators
 
     for (name, value) in pairs(config["rescaling"]) 
         config["rescaling"][name] = eval(Meta.parse(value)) 

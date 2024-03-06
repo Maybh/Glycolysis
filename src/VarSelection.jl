@@ -101,7 +101,7 @@ function find_best_subsets_per_fig(dropped_fig, all_param_subsets,data, config;
     n_iter=20, n_non_params=2, maxiter = 50_000, print_prog = print_prog)
     
     param_names = config["param_names"]
-    metab_names =  collect(keys(config["metab_names"]))
+    metab_names =  Symbol.(collect(keys(config["metab_names"])))
     nt_param_choice_names = config["nt_param_choice_names"]
 
     if print_prog ==true
@@ -255,15 +255,16 @@ function find_best_subset_denis(
     config,
     dir_path;
     n_iter = 20,
-    max_iter = 50_000,
+    maxiter = 50_000,
     pct_bound = 0, 
     save_results = false,
  )
 
 
     param_names = config["param_names"]
-    metab_names = collect(keys(config["metab_names"]))
+    metab_names = Symbol.(collect(keys(config["metab_names"])))
     nt_param_choice_names = config["nt_param_choice_names"]
+    n_non_params = length(config["non_opt_params"])
 
     # convert DF to NamedTuple for better type stability / speed
     rate_data = Tables.columntable(data[.!isnan.(data.Rate), [:Rate, metab_names..., :fig_num]],)
@@ -281,7 +282,7 @@ function find_best_subset_denis(
         param_ntuple_after_rescaling =  Vector{Any}()
     )
 
-    starting_param_subsets = param_subsets_per_n_params[0]
+    global starting_param_subsets = param_subsets_per_n_params[0]
     # Initialize array to save the best models from each round
     best_param_subsets = NamedTuple[]
 
@@ -472,7 +473,7 @@ function find_best_subset_denis(
 
     # TODO: find the best subsets estimates that already trained in the first stage and save them
     # TODO: make sure metab names is working properly in the new version (extract a list rather than a dict)
-
+    return best_param_subset
 end
 
 
@@ -677,8 +678,16 @@ function variable_selection(config, data, dir_path)
     #  best_param_subset_row = @time find_best_subset(data,vals_all_param_subsets, param_subsets_per_n_params, config,dir_path,  n_iter = config["fitting_params"]["n_iter"], maxiter = config["fitting_params"]["maxiter"], 
     #      print_prog = true, save_results = true,  all_parallel_subsets = false)
 
-    best_param_subset_row = @time find_best_subset(data,vals_all_param_subsets, param_subsets_per_n_params, config,dir_path,  n_iter = config["fitting_params"]["n_iter"], maxiter = config["fitting_params"]["maxiter"], 
-         print_prog = true, save_results = true,  all_parallel_subsets = true)
+    # best_param_subset_row = @time find_best_subset(data,vals_all_param_subsets, param_subsets_per_n_params, config,dir_path,  n_iter = config["fitting_params"]["n_iter"], maxiter = config["fitting_params"]["maxiter"], 
+    #      print_prog = true, save_results = true,  all_parallel_subsets = true)
+
+    best_param_subset_row = find_best_subset_denis(data,
+     param_subsets_per_n_params, 
+     config, 
+     dir_path;
+    n_iter = config["fitting_params"]["n_iter"],
+     maxiter = config["fitting_params"]["maxiter"], 
+     save_results = true )
 
      # Format and print the time
      ending_time = now()

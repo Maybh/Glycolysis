@@ -119,15 +119,16 @@ function loss_sse(
         optimization_param_names = nothing, 
             
     )
+
     # @info "kinetic params: $kinetic_params"
     # @info "nt_param_choice: $nt_param_choice"
     # @info "optimization_param_names: $optimization_param_names"
-    
+
     nt_param_choice_names = config["nt_param_choice_names"]
     if isnothing(nt_param_choice)
         nt_param_choice = (; zip(nt_param_choice_names, zeros(Int64, length(nt_param_choice_names)))...)
     end
-    
+  
     ### Convert kinetic params to NamedTuple:
     # if optimization_param_names is nothing use param_names and create NamedTuple
     if isnothing(optimization_param_names)
@@ -136,25 +137,25 @@ function loss_sse(
     else
         kinetic_params = NamedTuple{Tuple(Symbol.(optimization_param_names))}(kinetic_params)
     end 
-
+ 
     # rescaling and param_constraints
     kinetic_params = param_rescaling_from_conf(kinetic_params, config["rescaling"])
     kinetic_params = param_subset_select_from_conf(kinetic_params, nt_param_choice, 
-            config["param_constraints"], config["param_names"], config["constant_params"])
-    
+            config["param_names"], config["constant_params"])
+
     loss = zero(eltype(kinetic_params))
     log_pred_vs_data_ratios = Vector{Float64}(undef, length(rate_data.Rate))
     #precalculate rate_PKM2() for all points as it is expensive and reuse it for weights and loss
     for i = 1:length(rate_data.Rate)
+        rate_data_i = extract_data_at_index(rate_data, i)
         log_pred_vs_data_ratios[i] = log(
-            rate_PKM2(
-                rate_data.PEP[i],
-                rate_data.ADP[i],
-                rate_data.Pyruvate[i],
-                rate_data.ATP[i],
-                rate_data.F16BP[i],
-                rate_data.Phenylalanine[i],
-                kinetic_params,
+            rate_function(rate_data_i, 
+            config["substrates"], 
+            config["products"], 
+            config["regulators"],
+            config["reg_binding_sites"],
+            config["n"],
+            kinetic_params,
             ) / rate_data.Rate[i],
         )
     end
@@ -177,7 +178,7 @@ function loss(
     nt_param_choice = nothing,
     optimization_param_names = nothing
     )
-
+ 
     if config["loss_choice"] == "sse"
         loss_res = loss_sse(
             kinetic_params,
@@ -251,7 +252,7 @@ function train(
     )
 
     param_names = config["param_names"]
-    metab_names = config["metab_names"]
+    metab_names =  Symbol.(collect(keys(config["metab_names"])))
     nt_param_choice_names = config["nt_param_choice_names"]
     
     if isnothing(nt_param_choice)
