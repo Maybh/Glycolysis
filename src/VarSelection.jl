@@ -463,8 +463,16 @@ function find_best_subset_denis(
     end
 
     best_param_subset = DataFrame(df_results_all[argmin(df_results_all.test_loss),:])
-    println("Best subset: $(best_param_subset.param_subset)")
-    println(best_param_subset)
+    @info "Best subset: $(best_param_subset.param_subset)"
+    @info "$best_param_subset"
+
+    if save_results==true
+        enzyme_name = config["enzyme_name"]
+        save_csv_with_subdir(best_param_subset,
+            joinpath(dir_path, "Cluster_results/$date_time"),    
+            "denis_best_param_subset_$enzyme_name.csv"
+        )
+    end
 
     # TODO: find the best subsets estimates that already trained in the first stage and save them
     # TODO: make sure metab names is working properly in the new version (extract a list rather than a dict)
