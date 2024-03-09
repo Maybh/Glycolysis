@@ -26,27 +26,44 @@ function loss_likelihood(
     
     # rescaling and param_constraints
     kinetic_params = param_rescaling_from_conf(kinetic_params, config["rescaling"])
-    kinetic_params = param_subset_select_from_conf(kinetic_params, nt_param_choice, 
-        config["param_constraints"], config["param_names"], config["constant_params"])
+    kinetic_params = param_subset_select_from_conf(kinetic_params, nt_param_choice, config["param_names"], config["constant_params"])
     
     log_actual_vs_pred = Vector{Float64}(undef, length(rate_data.Rate))
+    # for i = 1:length(rate_data.Rate)
+    #     log_actual_vs_pred[i] = log(
+    #             rate_data.Rate[i] / rate_PKM2(
+    #                 rate_data.PEP[i],
+    #                 rate_data.ADP[i],
+    #                 rate_data.Pyruvate[i],
+    #                 rate_data.ATP[i],
+    #                 rate_data.F16BP[i],
+    #                 rate_data.Phenylalanine[i],
+    #                 kinetic_params,
+    #             ) ,
+    #     )
+    # end
+
     for i = 1:length(rate_data.Rate)
+        rate_data_i = extract_data_at_index(rate_data, i)
         log_actual_vs_pred[i] = log(
-                rate_data.Rate[i] / rate_PKM2(
-                    rate_data.PEP[i],
-                    rate_data.ADP[i],
-                    rate_data.Pyruvate[i],
-                    rate_data.ATP[i],
-                    rate_data.F16BP[i],
-                    rate_data.Phenylalanine[i],
-                    kinetic_params,
-                ) ,
+            rate_data.Rate[i] / rate_function(rate_data_i, 
+            config["substrates"], 
+            config["products"], 
+            config["regulators"],
+            config["reg_binding_sites"],
+            config["n"],
+            kinetic_params,
+            )
         )
     end
     
     df = DataFrame(figure=rate_data.fig_num, log_ratios=log_actual_vs_pred)
     formula = @formula(log_ratios ~ (1|figure))
     model = fit!(LinearMixedModel(formula, df))
+
+    sigma = model.σ
+    sigma_alpha = VarCorr(model).σρ.figure[1][1]
+    # TODO: add to output [sigma, sigma_alpha], and keep track on vector correspond to best sol
     
     return -loglikelihood(model) # Negative log-likelihood for minimization
 end
