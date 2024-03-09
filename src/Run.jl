@@ -33,7 +33,7 @@ config = read_config(config_path)
 if lowercase(config["mode"]) == "cluster"
     initial_cluster()
 elseif lowercase(config["mode"]) == "local"
-    initial_local_distribution(n_process=3)
+    initial_local_distribution(n_process=1)
 else
     throw(ArgumentError("mode is missing in configuration or invalid, it should be cluster or local]"))
 end

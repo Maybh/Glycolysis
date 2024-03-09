@@ -336,7 +336,7 @@ function find_best_subset_denis(
         ]
         @info "n_removed params: $n_removed_params, n param_subsets: $(length(param_subsets))"
         
-        results_array = pmap(
+        results_array = map(
             param_subset -> train(data, config; n_iter = n_iter,maxiter = maxiter, nt_param_choice = param_subset),
             param_subsets,
         )
@@ -358,7 +358,7 @@ function find_best_subset_denis(
                 ntuple_train_params, config["rescaling"])
             ntuple_train_params = param_subset_select_from_conf(
                 ntuple_train_params, 
-                nt_param_choice,
+                param_subsets[i],
                  config["param_names"], 
                  config["constant_params"]
                  )
@@ -425,13 +425,13 @@ function find_best_subset_denis(
     # return df_results_all
 
     n_repeats = 1
-    figs = unique(PKM2_data_for_fit.source)
+    figs = unique(data.source)[1:3]
     list_figs = repeat(vcat([fill(fig, length(best_param_subsets)) for fig in figs]...), n_repeats)
     list_param_subsets = repeat(vcat([best_param_subsets for fig in figs]...), n_repeats)
     @assert length(list_figs) == length(list_param_subsets)
 
     # Fit to training data missing one figure to rank subsets based on their training loss value
-    results_array = pmap(
+    results_array = map(
         (fig, param_subset) ->
             fig_loocv(fig, data, config; n_iter =n_iter, maxiter = maxiter, nt_param_choice = param_subset),
         list_figs,
@@ -442,13 +442,14 @@ function find_best_subset_denis(
  
         train_params = results_array[i][4]
         ntuple_params = NamedTuple{Tuple(param_names)}(train_params)
-        row_dict =  Dict("n_removed_params" => n_removed_params,
+        row_dict =  Dict("n_removed_params" => sum(values(list_param_subsets[i])[1:end-n_non_params] .> 0),
             "error_counter" => results_array[i][5],
             "param_subset" => string(list_param_subsets[i]),
             "dropped_fig" => results_array[i][1],
             "train_loss" => results_array[i][2],
+            "test_loss" => results_array[i][3],
             "params" => train_params,
-            "ntuple_params" => ntuple_train_params
+            "ntuple_params" => ntuple_params
         )
         push!(df_results_all, row_dict, promote=true)  
     end
@@ -461,7 +462,7 @@ function find_best_subset_denis(
         )
     end
 
-    best_param_subset = DataFrame(df_results_all[argmin(results_df.test_loss),:])
+    best_param_subset = DataFrame(df_results_all[argmin(df_results_all.test_loss),:])
     println("Best subset: $(best_param_subset.param_subset)")
     println(best_param_subset)
 

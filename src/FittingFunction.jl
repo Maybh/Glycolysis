@@ -235,7 +235,7 @@ function fig_loocv(
     ## return params after rescaling and param subset select: 
     est_params = NamedTuple{Tuple(train_res[4])}(train_res[2])
     est_params = param_rescaling_from_conf(est_params, config["rescaling"])
-    est_params = param_subset_select_from_conf(est_params, nt_param_choice, config["param_constraints"],
+    est_params = param_subset_select_from_conf(est_params, nt_param_choice, 
         config["param_names"], config["constant_params"])
     # for now keep only list of the values. later I want to fix it to send Named Tuple (and change code for that)
     est_params_lst = collect(values(est_params))
@@ -376,7 +376,7 @@ function test(
         nt_param_choice = (; zip(nt_param_choice_names, zeros(Int64, length(nt_param_choice_names)))...)
     end
     param_names = config["param_names"]
-    metab_names = config["metab_names"]
+    metab_names = Symbol.(collect(keys(config["metab_names"])))
 
     # Add a new column to data to assign an integer to each source/figure from publication
     data.fig_num = vcat(

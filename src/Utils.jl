@@ -226,8 +226,8 @@ function param_subset_select_from_conf(nt_params_names, nt_param_choice, param_n
         
         # handle Metab constrains
         if startswith(uppercase(name_str), "K")
-            K_a = replace(uppercase(name_str), "K_" => "K_a_")
-            K_i = replace(uppercase(name_str), "K_" => "K_i_")
+            K_a = replace(name_str, "K_" => "K_a_")
+            K_i = replace(name_str, "K_" => "K_i_")
             
             if choice > 0
                 if choice == 1
@@ -251,7 +251,7 @@ function param_subset_select_from_conf(nt_params_names, nt_param_choice, param_n
             
         elseif name_str == "Vmax"
             if choice == 1
-                nt_params_names_new[Symbol(name_str + "_i")] = 1.0
+                nt_params_names_new[Symbol(name_str , "_i")] = 1.0
             end
         end
     end
